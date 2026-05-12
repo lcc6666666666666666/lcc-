@@ -1,0 +1,10 @@
+.DS_Store
+*.dSYM/
+
+# Local build outputs
+/1
+/Compiler
+/yourprogram
+*.exe
+*.o
+*.obj
