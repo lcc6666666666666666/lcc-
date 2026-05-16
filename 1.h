@@ -41,11 +41,11 @@ unordered_map<string, LexType> reversedMap;
 unordered_map<LexType, string> LexTypeMap;
 unordered_map<string, LexType> sigLexTypeMap;
 vector<MyToken> tokenList;
-const char* srcAddr = "/Users/linxu/Desktop/编译原理课程设计/source.txt"; // 源代码文件
-const char* tokenAddr = "/Users/linxu/Desktop/编译原理课程设计/token.txt"; // 词法分析结果文件
-const char* errorAddr = "/Users/linxu/Desktop/编译原理课程设计/error.txt"; // 错误信息文件
-const char* treeAddr = "/Users/linxu/Desktop/编译原理课程设计/tree.txt";
-const char* objAddr = "/Users/linxu/Desktop/编译原理课程设计/mips.txt";
+const char* srcAddr = "source.txt"; // 源代码文件
+const char* tokenAddr = "token.txt"; // 词法分析结果文件
+const char* errorAddr = "error.txt"; // 错误信息文件
+const char* treeAddr = "tree.txt";
+const char* objAddr = "mips.txt";
 
 // MyToken构造函数实现
 MyToken::MyToken(int line, string str, LexType lexType) {
