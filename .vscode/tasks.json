@@ -2,21 +2,21 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Build with g++",
+            "label": "Build with MSVC",
             "type": "shell",
-            "command": "g++",
-            "args": [
-                "-std=c++17",
-                "-g",
-                "${file}",
-                "-o",
-                "${fileDirname}\\${fileBasenameNoExtension}.exe"
-            ],
+            "command": "call \"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\Common7\\Tools\\VsDevCmd.bat\" -arch=x64 && cl /nologo /utf-8 /std:c++17 /EHsc /Zi /W3 main.cpp lexer.cpp parser.cpp semantic.cpp codegen.cpp /Fe:\"${workspaceFolder}\\compiler.exe\" /link /DEBUG",
             "options": {
-                "cwd": "${fileDirname}"
+                "cwd": "${workspaceFolder}",
+                "shell": {
+                    "executable": "C:\\Windows\\System32\\cmd.exe",
+                    "args": [
+                        "/d",
+                        "/c"
+                    ]
+                }
             },
             "problemMatcher": [
-                "$gcc"
+                "$msCompile"
             ],
             "group": {
                 "kind": "build",

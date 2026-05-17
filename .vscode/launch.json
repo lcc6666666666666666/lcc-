@@ -2,15 +2,14 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "type": "cppdbg",
+            "type": "cppvsdbg",
             "request": "launch",
-            "name": "Debug",
-            "program": "${fileDirname}\\${fileBasenameNoExtension}.exe",
+            "name": "Debug (MSVC)",
+            "program": "${workspaceFolder}\\compiler.exe",
             "args": [],
-            "cwd": "${fileDirname}",
-            "preLaunchTask": "Build with g++",
-            "MIMode": "gdb",
-            "miDebuggerPath": "gdb.exe"
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "Build with MSVC",
+            "console": "integratedTerminal"
         }
     ]
 }

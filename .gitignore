@@ -8,3 +8,12 @@
 *.exe
 *.o
 *.obj
+*.ilk
+*.pdb
+/compiler
+/build/web-compiler/
+/web/node_modules/
+/web/dist/
+/web/.vite/
+/web/.npm-cache/
+/web/*.log

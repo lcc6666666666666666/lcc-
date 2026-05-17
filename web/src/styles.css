@@ -1,0 +1,529 @@
+:root {
+  color-scheme: dark;
+  font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #1e1e1e;
+  color: #d4d4d4;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  color: inherit;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-rows: 40px minmax(0, 1fr) 24px;
+  height: 100vh;
+  min-width: 900px;
+  overflow: hidden;
+  background: #1e1e1e;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 40px;
+  padding: 0 10px 0 14px;
+  border-bottom: 1px solid #3c3c3c;
+  background: #252526;
+}
+
+.toolbar__title {
+  min-width: 220px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #f0f0f0;
+}
+
+.toolbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.button {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid #3c3c3c;
+  border-radius: 3px;
+  background: #2d2d2d;
+  color: #d4d4d4;
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled),
+.button:focus-visible {
+  border-color: #007acc;
+  background: #333333;
+  outline: none;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.button--primary {
+  border-color: #0e639c;
+  background: #0e639c;
+  color: #ffffff;
+}
+
+.button--primary:hover:not(:disabled),
+.button--primary:focus-visible {
+  border-color: #1177bb;
+  background: #1177bb;
+}
+
+.button--compact {
+  height: 24px;
+  padding-inline: 8px;
+  font-size: 12px;
+}
+
+.shortcut {
+  color: #858585;
+  font-size: 12px;
+}
+
+.compile-status {
+  min-width: 74px;
+  padding: 3px 8px;
+  border: 1px solid #3c3c3c;
+  border-radius: 3px;
+  text-align: center;
+  font-size: 12px;
+}
+
+.compile-status--success {
+  border-color: #2f7d32;
+  color: #89d185;
+}
+
+.compile-status--error {
+  border-color: #a1260d;
+  color: #f48771;
+}
+
+.compile-status--compiling {
+  border-color: #cca700;
+  color: #cca700;
+}
+
+.workbench {
+  display: grid;
+  grid-template-columns: 214px minmax(0, 1fr);
+  min-height: 0;
+}
+
+.activity-bar {
+  min-width: 0;
+  border-right: 1px solid #3c3c3c;
+  background: #252526;
+}
+
+.activity-bar__section-title {
+  padding: 12px 12px 8px;
+  color: #cccccc;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.file-list__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 30px;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  color: #cccccc;
+  text-align: left;
+  cursor: pointer;
+}
+
+.file-list__item:hover,
+.file-list__item:focus-visible {
+  background: #2a2d2e;
+  outline: none;
+}
+
+.file-list__item--active {
+  background: #37373d;
+  color: #ffffff;
+}
+
+.file-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 18px;
+  border: 1px solid #3c3c3c;
+  border-radius: 3px;
+  color: #cccccc;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 10px;
+}
+
+.file-badge--source {
+  color: #c586c0;
+}
+
+.file-badge--token {
+  color: #4fc1ff;
+}
+
+.file-badge--tree {
+  color: #dcdcaa;
+}
+
+.file-badge--mips {
+  color: #b5cea8;
+}
+
+.file-badge--error {
+  color: #f48771;
+}
+
+.main-area {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) 32vh;
+  min-width: 0;
+  min-height: 0;
+}
+
+.editor-pane {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.bottom-panel {
+  display: grid;
+  grid-template-rows: 32px minmax(0, 1fr);
+  min-height: 0;
+  border-top: 1px solid #3c3c3c;
+  background: #1b1b1b;
+}
+
+.panel-tabs,
+.raw-tabs {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  border-bottom: 1px solid #3c3c3c;
+  background: #252526;
+}
+
+.panel-tab,
+.raw-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 31px;
+  padding: 0 12px;
+  border: 0;
+  border-right: 1px solid #3c3c3c;
+  background: transparent;
+  color: #cccccc;
+  cursor: pointer;
+}
+
+.panel-tab:hover,
+.panel-tab:focus-visible,
+.raw-tab:hover,
+.raw-tab:focus-visible {
+  background: #2a2d2e;
+  outline: none;
+}
+
+.panel-tab--active,
+.raw-tab--active {
+  background: #1b1b1b;
+  color: #ffffff;
+}
+
+.tab-count {
+  min-width: 18px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: #a1260d;
+  color: #ffffff;
+  font-size: 11px;
+}
+
+.panel-body {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.table-wrap {
+  height: 100%;
+  overflow: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.data-table th,
+.data-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid #2d2d2d;
+  text-align: left;
+  vertical-align: top;
+}
+
+.data-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #252526;
+  color: #cccccc;
+  font-weight: 600;
+}
+
+.data-table tbody tr {
+  cursor: pointer;
+}
+
+.data-table tbody tr:hover {
+  background: #2a2d2e;
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #858585;
+  font-size: 13px;
+}
+
+.severity,
+.token-badge,
+.ast-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 11px;
+}
+
+.severity--error {
+  background: #5a1d1d;
+  color: #f48771;
+}
+
+.severity--warning {
+  background: #4d3b00;
+  color: #cca700;
+}
+
+.severity--info {
+  background: #123f5f;
+  color: #75beff;
+}
+
+.token-badge--keyword {
+  background: #16395a;
+  color: #9cdcfe;
+}
+
+.token-badge--id {
+  background: #333333;
+  color: #d4d4d4;
+}
+
+.token-badge--int {
+  background: #243d26;
+  color: #b5cea8;
+}
+
+.token-badge--char {
+  background: #4a332d;
+  color: #ce9178;
+}
+
+.token-badge--symbol {
+  background: #2d2d2d;
+  color: #cccccc;
+}
+
+.token-badge--error {
+  background: #5a1d1d;
+  color: #f48771;
+}
+
+.lexeme-cell {
+  font-family: Consolas, "Courier New", monospace;
+}
+
+.tokens-panel,
+.raw-panel,
+.code-panel,
+.console-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.panel-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 5px 8px;
+  border-bottom: 1px solid #2d2d2d;
+}
+
+.panel-tools--right {
+  justify-content: flex-end;
+}
+
+.filter-input {
+  width: min(360px, 70%);
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid #3c3c3c;
+  border-radius: 3px;
+  background: #1e1e1e;
+  color: #d4d4d4;
+}
+
+.filter-input:focus {
+  border-color: #007acc;
+  outline: none;
+}
+
+.panel-count {
+  color: #858585;
+  font-size: 12px;
+}
+
+.ast-tree {
+  height: 100%;
+  overflow: auto;
+  padding: 6px 0;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 13px;
+}
+
+.ast-node__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  padding-right: 10px;
+}
+
+.ast-node__row:hover {
+  background: #2a2d2e;
+}
+
+.ast-node__toggle {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #cccccc;
+  cursor: pointer;
+}
+
+.ast-node__toggle:disabled {
+  cursor: default;
+}
+
+.ast-badge {
+  background: #33294a;
+  color: #c586c0;
+}
+
+.code-panel__editor {
+  flex: 1;
+  min-height: 0;
+}
+
+.console-view {
+  overflow: auto;
+}
+
+.console-view section {
+  min-height: 120px;
+  border-bottom: 1px solid #2d2d2d;
+}
+
+.console-view h3 {
+  margin: 0;
+  padding: 7px 10px;
+  color: #cccccc;
+  font-size: 12px;
+  font-weight: 600;
+  background: #252526;
+}
+
+.raw-pre {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 10px;
+  overflow: auto;
+  color: #d4d4d4;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.raw-pre--stderr {
+  color: #f48771;
+}
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  padding: 0 10px;
+  background: #007acc;
+  color: #ffffff;
+  font-size: 12px;
+}
+
+.status-bar__message {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

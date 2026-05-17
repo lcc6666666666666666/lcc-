@@ -1,71 +1,49 @@
-# SNL 语言编译器 
+# SNL Compiler
 
-## 项目简介
-本项目实现了一个 SNL 语言的编译器，包含完整的编译流程：
-- **前端处理**：词法分析、语法分析
-- **后端处理**：语义分析、MIPS 目标代码生成
-- **错误处理**：详细的错误报告机制
-- **输出文件**：中间结果和目标代码
+这是一个 SNL 语言编译器课程设计项目，编译流程已经按阶段拆分为独立模块：
+
+```text
+source.txt
+  -> 词法分析 lexer
+  -> 语法分析 parser
+  -> 语义分析 semantic
+  -> 目标代码生成 codegen
+  -> mips.txt
+```
 
 ## 项目结构
-```
-Compiler/
-├── 源代码文件
-│   ├── 1.cpp                # 主程序源代码
-│   ├── 1.h                  # 头文件
-│   ├── 2.h                  # 辅助头文件
-├── 输入输出文件
-│   ├── source.txt           # 源代码输入文件
-│   ├── token.txt            # 词法分析输出
-│   ├── tree.txt             # 语法树输出
-│   ├── mips.txt             # MIPS汇编代码
-│   ├── error.txt            # 错误报告
-├── 可执行文件
-│   ├── 1                    # 主程序可执行文件
-│   ├── Compiler             # 备用可执行文件
-│   ├── yourprogram          # 测试用可执行文件
-├── 调试文件
-│   ├── 1.dSYM               # 调试符号文件
-│   ├── Compiler.dSYM        # 调试符号文件
-│   ├── yourprogram.dSYM     # 调试符号文件
+
+```text
+lexer.h / lexer.cpp       词法分析、Token 定义、token.txt/error.txt 输出
+ast.h                     语法树节点和共享 AST 类型
+parser.h / parser.cpp     递归下降语法分析、tree.txt 输出
+semantic.h / semantic.cpp 符号表、类型信息、语义检查
+codegen.h / codegen.cpp   MIPS 目标代码生成、mips.txt 输出
+main.cpp                  编译流程入口
+
+1.h                       兼容旧 include 的汇总头文件
+1.cpp                     旧单文件入口已拆分，仅保留说明
+2.h                       兼容旧目标代码头文件名
+
+source.txt                源程序输入
+token.txt                 词法分析输出
+tree.txt                  语法树输出
+mips.txt                  目标代码输出
+error.txt                 错误信息输出
 ```
 
-## 快速开始
+## 构建
 
-### 编译项目
 ```bash
-g++ 1.cpp -o compiler
+g++ -std=c++17 -g main.cpp lexer.cpp parser.cpp semantic.cpp codegen.cpp -o compiler
 ```
 
-### 运行编译器
+VS Code 的默认构建任务也已经改为编译上述多个源文件，并输出 `compiler.exe`。
+
+## 运行
+
 ```bash
 ./compiler
 ```
 
-### 输出文件说明
-- `token.txt`: 词法分析结果（Token流）
-- `tree.txt`: 语法树结构
-- `mips.txt`: 生成的MIPS汇编代码
-- `error.txt`: 编译过程中的错误信息
-
-## 测试流程
-1. 准备测试代码：编辑`source.txt`
-2. 运行编译器
-3. 检查输出文件：
-   - 验证`token.txt`的词法分析结果
-   - 检查`tree.txt`的语法树结构
-   - 使用MARS模拟器运行`mips.txt`（您需要另存为一个.s文件后传入模拟器）
-
-## 开发环境
-- **操作系统**: macOS/Windows
-- **编译器**: g++
-- **MIPS模拟器**: MARS 4.5
-- **开发工具**: Visual Studio Code
-
-## 扩展功能
-- 支持更多的SNL语言特性
-- 优化生成的MIPS代码
-- 添加更详细的错误提示
-
-## 许可证
-本项目为编译原理课程设计作业，仅限教学使用。
+程序会读取 `source.txt`，并生成 `token.txt`、`tree.txt`、`mips.txt` 和 `error.txt`。
