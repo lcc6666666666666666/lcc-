@@ -204,6 +204,10 @@ button {
   color: #dcdcaa;
 }
 
+.file-badge--midcode {
+  color: #ce9178;
+}
+
 .file-badge--mips {
   color: #b5cea8;
 }

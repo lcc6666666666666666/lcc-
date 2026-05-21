@@ -1,7 +1,7 @@
 export type CompileStage = 'lexer' | 'parser' | 'semantic' | 'codegen' | 'compiler';
 export type CompileStatus = 'idle' | 'compiling' | 'success' | 'error';
-export type BottomTab = 'problems' | 'tokens' | 'ast' | 'mips' | 'console' | 'raw';
-export type SourceFileKey = 'source' | 'token' | 'tree' | 'mips' | 'error';
+export type BottomTab = 'problems' | 'tokens' | 'ast' | 'midcode' | 'mips' | 'console' | 'raw';
+export type SourceFileKey = 'source' | 'token' | 'tree' | 'midcode' | 'mips' | 'error';
 
 export interface Diagnostic {
   line: number;
@@ -14,6 +14,7 @@ export interface Diagnostic {
 export interface CompilerOutputs {
   token: string;
   tree: string;
+  midcode: string;
   mips: string;
   error: string;
   stdout: string;

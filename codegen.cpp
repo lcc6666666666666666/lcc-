@@ -35,6 +35,7 @@ int highLine=0; //记录最新行索引
 int curAddr = 0x00400000;//相对偏移
 int highAddr = 0x00400000;//最新地址
 
+/* 功能：在目标代码中预留num条指令位置，用于之后回填跳转指令等代码。 */
 int  emitSkip(int num) {
     int i = curLine;
     while (num != 0) {
@@ -48,6 +49,7 @@ int  emitSkip(int num) {
     return i;
 }
 
+/* 功能：向目标MIPS代码中写入一行注释，不增加目标指令地址。 */
 void emitComment(string c) {
     if (curLine >= mipsCode.size()) {
         mipsCode.resize(mipsCode.size() + 2000, "");
@@ -57,6 +59,7 @@ void emitComment(string c) {
     highLine = max(curLine, highLine);
 }
 
+/* 功能：生成一个指定名称的MIPS标签，并返回该标签所在代码行。 */
 int genLabel(string label) {
     string mips = label + ":";
     mipsCode[curLine] = mips;
@@ -67,6 +70,7 @@ int genLabel(string label) {
     return curLine - 1;
 }
 
+/* 功能：生成寄存器-内存格式指令，如 lw/sw reg, offset(base)。 */
 int objMips_RM(string op, string rs, string rt, int immediate, string comment) {
     if (curLine >= mipsCode.size()) {
         mipsCode.resize(mipsCode.size() + 2000, "");
@@ -80,6 +84,7 @@ int objMips_RM(string op, string rs, string rt, int immediate, string comment) {
     return curLine - 1;//返回生成的代码行
 }
 
+/* 功能：临时把代码生成位置回退到指定行号和地址，供回填使用。 */
 void emitBackup(int loc, int addr) {
     curAddr = addr;
     curLine = loc;
@@ -87,6 +92,7 @@ void emitBackup(int loc, int addr) {
     highAddr = max(curAddr, highAddr);
 }
 
+/* 功能：生成无条件跳转类指令，如 j、jal、jr。 */
 int objMips_UnConj(string op, string target, string comment) {
     if (curLine >= mipsCode.size()) {
         mipsCode.resize(mipsCode.size() + 2000, "");
@@ -100,11 +106,13 @@ int objMips_UnConj(string op, string target, string comment) {
     return curLine - 1;//返回生成的代码行
 }
 
+/* 功能：回填完成后恢复到目前生成过的最高代码位置。 */
 void emitRestore() {
     curAddr = highAddr;
     curLine = highLine;
 }
 
+/* 功能：生成两个操作数的寄存器指令，如 move、li、mflo 等。 */
 int objMips_Regs(string op, string rd, string rs, string comment)
 {
     if (curLine >= mipsCode.size()) {
@@ -119,6 +127,7 @@ int objMips_Regs(string op, string rd, string rs, string comment)
     return curLine - 1;
 }
 
+/* 功能：生成寄存器和立即数参与的三操作数指令，如 addi rd, rs, imm。 */
 int objMips_RegIm(string op, string rd, string rs, string immediate, string comment)
 {
     if (curLine >= mipsCode.size()) {
@@ -133,6 +142,7 @@ int objMips_RegIm(string op, string rd, string rs, string immediate, string comm
     return curLine - 1;
 }
 
+/* 功能：生成三个寄存器操作数的指令，如 add/sub rd, rs, rt。 */
 int objMips_Regs(string op, string rd, string rs, string rt, string comment)
 {
     if (curLine >= mipsCode.size()) {
@@ -147,6 +157,7 @@ int objMips_Regs(string op, string rd, string rs, string rt, string comment)
     return curLine - 1;
 }
 
+/* 功能：生成单寄存器操作数指令，如 mflo reg 或部分伪指令。 */
 int objMips_Regs(string op, string rs, string comment)
 {
     if (curLine >= mipsCode.size()) {
@@ -162,6 +173,7 @@ int objMips_Regs(string op, string rs, string comment)
 }
 
 /*返回值t0，表示所要访问活动记录的基址*/
+/* 功能：根据变量所在层号，通过display表找到对应活动记录基址，结果放入$t0。 */
 void getARBase(int varLevel) {
     /*var变量要对对应level-1的过程活动记录找！！！！！！！！*/
     /*先假定 t0是存放display表相对应基址的偏移的吧, 假定t2存当前的基址*/
@@ -180,6 +192,7 @@ void getARBase(int varLevel) {
 }
 
 //这个函数里t0装要访问数组元素的下标，t1装数组下界
+/* 功能：计算变量、数组元素或记录域的绝对地址，结果放入$t0。 */
 void findAbsAddr(Treenode* t) {
     int off;
     int varLevel;
@@ -255,6 +268,7 @@ void findAbsAddr(Treenode* t) {
 }
 
 int labelId=0;
+/* 功能：提前构造即将生成的标签名，不写入目标代码，供跳转指令引用。 */
 string prepare_label(string kind = "", int beforeLabel = 0) {
     string ret = "label_";
     ret += to_string(labelId + beforeLabel);
@@ -262,6 +276,7 @@ string prepare_label(string kind = "", int beforeLabel = 0) {
     return ret;
 }
 
+/* 功能：生成条件跳转指令，如 beq/blt rs, rt, label。 */
 int objMips_Conj(string op, string rs, string rt, string tag, string comment) {
     if (curLine >= mipsCode.size()) {
         mipsCode.resize(mipsCode.size() + 2000, "");
@@ -275,6 +290,7 @@ int objMips_Conj(string op, string rs, string rt, string tag, string comment) {
     return curLine - 1;//返回生成的代码行
 }
 
+/* 功能：生成带全局递增编号的唯一标签，并返回标签名。 */
 string emitLabel(string kind = "") {
     if (curLine >= mipsCode.size()) {
         mipsCode.resize(mipsCode.size() + 2000, "");
@@ -288,6 +304,7 @@ string emitLabel(string kind = "") {
     return ret;
 }
 
+/* 功能：为表达式节点生成MIPS代码，表达式计算结果统一放入$t0。 */
 void genExp(Treenode* t)
 {
     /* 语法树节点各个子节点 */
@@ -416,6 +433,7 @@ void genExp(Treenode* t)
     }
 }
 
+/* 功能：代码生成分发入口，根据语法树节点类型调用语句或表达式生成函数。 */
 void cGen(Treenode* tree) {
     if (tree != NULL)
     {
@@ -440,6 +458,7 @@ void cGen(Treenode* tree) {
     }
 }
 
+/* 功能：生成MIPS系统调用代码，支持读整数、写整数、写字符串和退出等操作。 */
 void objMips_SysCall(int choice, string reg) {
     if (curLine >= mipsCode.size()) {
         mipsCode.resize(mipsCode.size() + 2000, "");
@@ -476,22 +495,19 @@ void objMips_SysCall(int choice, string reg) {
     }
 }
 
+/* 功能：为语句节点生成MIPS代码，处理if、while、赋值、读写、调用和返回语句。 */
 void genStmt(Treenode* t) {
     /*用于控制转移display表的各项sp值*/
 
     /*用于存储语法树的各个节点*/
     Treenode* p0 = NULL;
     Treenode* p1 = NULL;
-    Treenode* pp = NULL;
     Treenode* p2 = NULL;
-    SymbolsTable* entry = NULL;
     int FormParam;
 
     /*用于记录跳转回填时的地址*/
-    int  savedLoc1, savedLoc2, currentLoc;
-    int savedAddr1, savedAddr2, currentAddr;
-    /*指向域变量的指针*/
-    fieldChain* fieldMem = NULL;
+    int  savedLoc1, savedLoc2;
+    int savedAddr1, savedAddr2;
 
     /*指向实参的指针*/
     ParamTable* curParam = NULL;
@@ -525,36 +541,28 @@ void genStmt(Treenode* t) {
         savedAddr2 = curAddr;
         savedLoc2 = emitSkip(1);
 
-        /* 指令回填地址currentLoc为当前生成代码写入地址	*
-         * 当前地址为条件为假的处理指令开始地址			*/
-        currentAddr = curAddr;
-        currentLoc = emitSkip(0);
+        /* 生成else标签，作为条件为假时的跳转目标 */
         string label_else = emitLabel("Else");
         /*退回到指令回填地址savedLoc1,此处已经预留了一个指令空位*/
         emitBackup(savedLoc1, savedAddr1);
 
-        /* 写入跳转到else的指令,此时跳转位置currentLoc已经得到 *
-         * 指令的跳转地址为相对地址							   */
+        /* 写入跳转到else的指令 */
         objMips_Conj("beq", T0, ZERO, label_else, "跳转到else分支");
-        /* 恢复当前生成代码写入地址emitLoc为指令回填地址currentLoc,	*
-         * 恢复后地址为条件为假处理指令开始地址,即else开始位置		*/
+        /* 恢复到else标签后的代码生成位置 */
         emitRestore();
 
         /* 处理else语句部分的代码 */
         cGen(p2);
 
-        /* 指令回填地址currentLoc作为当前生成代码写入地址	*
-         * 当前地址为判断语句结束位置						*/
-        currentLoc = emitSkip(0);
+        /* 生成if结束标签，作为then分支结束后的跳转目标 */
         string label_endif = emitLabel("EndIf");
         /* 回退到指令回填地址savedLoc2，此处已经预留了一个指令空间 */
         emitBackup(savedLoc2, savedAddr2);
 
-        /* 写入跳转到end的指令，此时跳转位置currentLoc已经得到地址 */
+        /* 写入跳转到end的指令 */
 
         objMips_UnConj("j", label_endif, "jmp to end");
-        /* 恢复当前生成代码写入地址emitLoc为指令回填地址currentLoc,	*
-         * 恢复后地址为判断语句结束地址,即end位置	    			*/
+        /* 恢复到EndIf标签后的代码生成位置 */
         emitRestore();
 
         emitComment("<- if");            /*if语句结束*/
@@ -566,9 +574,6 @@ void genStmt(Treenode* t) {
         string while_label = emitLabel("While");
         p0 = t->child[0].get();  /*p0为while语句的条件表达式部分*/
         p1 = t->child[1].get();  /*p1为while语句的语句序列部分*/
-        currentAddr = curAddr;
-        currentLoc = emitSkip(0);
-
         cGen(p0);          /*生成条件表达式部分代码*/
 
         /* 如果条件表达式为假，则跳转至while语句结束   *
@@ -585,9 +590,6 @@ void genStmt(Treenode* t) {
         emitComment(" return to condition exp");
         string endwhile_label = emitLabel("EndWhile");
         /*条件为假时,跳出while循环*/
-        currentAddr = curAddr;
-        currentLoc = emitSkip(0);
-
         emitBackup(savedLoc1, savedAddr1);
 
         objMips_Conj("beq", T0, ZERO, endwhile_label, " jump out while ");
@@ -686,13 +688,12 @@ void genStmt(Treenode* t) {
         p0 = t->child[0].get();    /*过程名*/
         p1 = t->child[1].get();    /*过程的实参*/
 
-        pp = p0;
         curParam = t->table[0]->attrIR->More.ProcAttr.param;
         SymbolsTable* procSymbol = t->table[0];
 
 
         while ((curParam != NULL) && (p1 != NULL)) {
-            FormParam = curParam->entry->attrIR->More.VarAttr.off;
+            FormParam = curParam->entry->attrIR->More.VarAttr.off;//取当前形参在被调用过程活动记录中的偏移量
 
             /*形参是indir*/
             if (curParam->entry->attrIR->More.VarAttr.access == indir) {
@@ -766,8 +767,6 @@ void genStmt(Treenode* t) {
         //接下来的栈底统一用T4！！！！
         objMips_RegIm("addi", SP, SP, to_string(-ACSIZE), "申请ACSIZE大小的活动记录空间,SP指向栈顶");
         int displayFill = procSymbol->attrIR->More.ProcAttr.off;
-        savedAddr1 = curAddr;
-        savedLoc1 = emitSkip(2);
         for (int i = 0; i < procSymbol->attrIR->More.ProcAttr.level; i++) {
             objMips_RM("lw", T5, T4, 0, "动态链取上层记录初始地址");
             objMips_RM("lw", T6, T5, -24, "取上层记录display表偏移地址");
@@ -778,15 +777,6 @@ void genStmt(Treenode* t) {
             displayFill += 4;
         }
         objMips_RM("sw", T4, T4, -displayFill, "还有本层起始地址也要填入display表");
-        //返回地址
-        currentAddr = curAddr;
-        currentLoc = emitSkip(0);
-        emitBackup(savedLoc1, savedAddr1);
-        /*这里不能这样填*/
-        //objMips_Regs("li", T1, to_string(currentAddr), "载入返回地址");
-
-        //objMips_RM("sw", T1, T4, -4, "回填返回地址");
-        emitRestore();
 
         objMips_UnConj("jal", "Proc_" + p0->name[0], "转向子程序");
 
@@ -803,13 +793,10 @@ void genStmt(Treenode* t) {
     }
 }
 
+/* 功能：为过程声明生成MIPS代码，包括过程入口、嵌套过程、过程体和返回逻辑。 */
 void genProc(Treenode* t) {
     int savedLoc1;         /*处理过程入口时所需的代码地址*/
     int savedAddr1;
-    /*处理过程体部分*/
-    int currentAddr = curAddr;
-    int currentLoc = emitSkip(0);
-    t->table[0]->attrIR->More.ProcAttr.code = currentLoc;
     emitComment("->procedure");
     /*生成标签*/
     /*修改处*/
@@ -837,8 +824,6 @@ void genProc(Treenode* t) {
     }
     /*在此处生成begin标签*/
     genLabel(t->name[0] + "_begin");
-    currentAddr = curAddr;
-    currentLoc = emitSkip(0);
     emitBackup(savedLoc1, savedAddr1); //回填跳转指令 
     /*填写保留的跳转标签*/
     objMips_UnConj("j", t->name[0] + "_begin", "过程入口");
@@ -856,9 +841,8 @@ void genProc(Treenode* t) {
     emitComment("<-procedure");
 }
 
+/* 功能：目标代码生成总入口，生成数据段、过程代码、主程序代码并写入目标文件。 */
 void codeGen(TreenodePtr t) {
-    int currentLoc;//存储主程序入口地址
-    int currentAddr;
     int savedloc;//目标代码第一条地址
     int savedAddr;
     TreenodePtr& MainProc = t->child[0];//Phead
@@ -904,8 +888,6 @@ void codeGen(TreenodePtr t) {
     objMips_RegIm("addi", SP, SP, to_string(-ACSIZE), "申请Main程序栈空间");
 
     //处理主程序体
-    currentAddr = curAddr;
-    currentLoc = emitSkip(0);
     emitBackup(savedloc, savedAddr);
     objMips_UnConj("j", mainlabel, "main entry");
     emitRestore();

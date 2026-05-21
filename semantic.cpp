@@ -4,16 +4,21 @@
 #include <cstdlib>
 #include <iostream>
 
+// 作用：构造记录类型的一个域节点，保存域名、域类型和域内偏移。
 FieldChain::fieldChain(string idName, TypeIR* unitType, int off) :idName(idName), unitType(unitType), off(off), next(nullptr) {
 }
 
+// 作用：构造一个空的记录域链表节点，常用作临时头节点。
 FieldChain::fieldChain() :next(nullptr), off(0) {
 }
 
 //类型内部结构
 
 
+// 作用：默认构造类型信息对象。
 TypeIR::typeIR() {}
+
+// 作用：构造基本类型信息，并设置 integer、char、bool 的存储大小。
 TypeIR::typeIR(DecKcate type) {
     typeKind = type;
     switch (type) {
@@ -25,6 +30,8 @@ TypeIR::typeIR(DecKcate type) {
         break;
     }
 }
+
+// 作用：构造数组类型信息，记录上下界、元素类型并计算数组总大小。
 TypeIR::typeIR(DecKcate type, int low, int up, TypeIR* elemTy) {
     typeKind = type;
     if (type != ArrayK) {
@@ -36,6 +43,8 @@ TypeIR::typeIR(DecKcate type, int low, int up, TypeIR* elemTy) {
     this->More.ArrayAttr.elemTy = elemTy;
     this->size = (up - low + 1) * elemTy->size;
 }
+
+// 作用：构造记录类型信息，保存域链表并累计记录整体大小。
 TypeIR::typeIR(DecKcate type, FieldChain* bodyPtr) {
     typeKind = type;
     if (type != RecordK) {
@@ -55,11 +64,13 @@ TypeIR::typeIR(DecKcate type, FieldChain* bodyPtr) {
 
 //参数表
 
+// 作用：构造过程形参表节点。
 paramTable::paramTable() :entry(nullptr), next(nullptr) {}
 
 //标识符信息项
 
 
+// 作用：构造类型标识符的属性信息。
 AttributeIR::attributeIR(TypeIR* idType, IdKind idKind) {
     if (idKind != typeKind) {
         cout << "attributeIr中IdKind不为typeKind" << endl;
@@ -69,6 +80,7 @@ AttributeIR::attributeIR(TypeIR* idType, IdKind idKind) {
     this->idKind = idKind;
 }
 
+// 作用：构造变量标识符的属性信息，包括访问方式、层号和偏移。
 AttributeIR::attributeIR(TypeIR* idType, IdKind idKind, AccessKind access, int level, int off) {
     if (idKind != varKind) {
         cout << "attributeIr中IdKind不为varKind" << endl;
@@ -81,7 +93,8 @@ AttributeIR::attributeIR(TypeIR* idType, IdKind idKind, AccessKind access, int l
     this->More.VarAttr.off = off;
 }
 
-AttributeIR::attributeIR(TypeIR* idType, IdKind idKind, int level, ParamTable* param, int off) {
+// 作用：构造过程标识符的属性信息，包括层号、参数表和活动记录偏移。
+AttributeIR::attributeIR(TypeIR* idType, IdKind idKind, int level, ParamTable* param) {
     if (idKind != procKind) {
         cout << "attributeIr中IdKind不为procKind" << endl;
         exit(1);
@@ -94,6 +107,7 @@ AttributeIR::attributeIR(TypeIR* idType, IdKind idKind, int level, ParamTable* p
     this->More.ProcAttr.level = level;
 }
 
+// 作用：默认构造标识符属性信息对象。
 AttributeIR::attributeIR() {}
 
 
@@ -102,6 +116,8 @@ AttributeIR::attributeIR() {}
 
 
 TypeIR* intPtr, * charPtr, *boolPtr;
+
+// 作用：初始化系统内置的 integer、char、bool 类型对象。
 void initType() {
     intPtr = new TypeIR(IntegerK);
     charPtr = new TypeIR(CharK);
@@ -110,6 +126,8 @@ void initType() {
 
 vector<SymbolsTable*>scope;
 int Leveloff=0;
+
+// 作用：创建新的作用域符号表，并初始化当前层变量偏移。
 void CreateTable() {
     Leveloff = 28;
     SymbolsTable* add = new SymbolsTable();
@@ -117,6 +135,7 @@ void CreateTable() {
     scope.emplace_back(add);
 }
 
+// 作用：把一个标识符及其属性插入到指定符号表尾部，并返回新表项。
 SymbolsTable* Enter(string idname, AttributeIR* attriP, SymbolsTable* tableToEnter) {
 
     SymbolsTable* add = new SymbolsTable();
@@ -131,9 +150,9 @@ SymbolsTable* Enter(string idname, AttributeIR* attriP, SymbolsTable* tableToEnt
     return add;
 }
 
+// 作用：查找标识符；flag 为 1 时只查当前层，否则从内层向外层查找。
 SymbolsTable* FindEntry(string idname, int flag) {
     
-    int len = scope.size();
     if (flag == 1) {
         
         SymbolsTable* search = scope.back()->next;
@@ -158,6 +177,7 @@ SymbolsTable* FindEntry(string idname, int flag) {
     return nullptr;
 }
 
+// 作用：根据数组声明节点生成数组类型信息，并检查数组上下界和元素类型。
 TypeIR* arrayType(Treenode* t, string name) {
     int low = t->attr.ArrayAttr.low, up = t->attr.ArrayAttr.up;
     if (low > up) {
@@ -180,6 +200,7 @@ TypeIR* arrayType(Treenode* t, string name) {
     return new TypeIR(ArrayK, low, up, elemTy);
 }
 
+// 作用：根据记录声明节点生成记录类型信息，建立记录域链表并计算各域偏移。
 TypeIR* recordType(Treenode* t, string name) {
     TreenodePtr& tmp = t->child[0];
 
@@ -231,6 +252,7 @@ TypeIR* recordType(Treenode* t, string name) {
     return new TypeIR(RecordK, body);
 }
 
+// 作用：处理类型名引用，检查该标识符是否已声明且确实是类型标识符。
 TypeIR* nameType(Treenode* t, string name) {
     SymbolsTable* symbol = FindEntry(name, 0);
     if (symbol == nullptr) {
@@ -245,6 +267,7 @@ TypeIR* nameType(Treenode* t, string name) {
     return symbol->attrIR->idType;
 }
 
+// 作用：统一分派类型处理逻辑，返回基本、数组、记录或类型名引用对应的 TypeIR。
 TypeIR* TypeProcess(Treenode* t, DecKcate typekind, string name) {
 
     switch (typekind) {
@@ -263,6 +286,7 @@ TypeIR* TypeProcess(Treenode* t, DecKcate typekind, string name) {
     return nullptr;
 }
 
+// 作用：处理类型声明部分，将每个新类型登记到当前作用域符号表。
 void ProcessType(Treenode* t) {
     //TypeK Node :t
     TreenodePtr& tmp = t->child[0];
@@ -280,6 +304,7 @@ void ProcessType(Treenode* t) {
     }
 }
 
+// 作用：处理变量声明部分，将变量登记到当前作用域并分配当前层偏移。
 void ProcessVar(Treenode* t) {
     //Vark Node:t
 
@@ -311,6 +336,7 @@ void ProcessVar(Treenode* t) {
 
 }
 
+// 作用：处理过程头部，登记过程名，创建过程作用域，并处理形参符号表项。
 SymbolsTable* HeadProcess(Treenode* t) {
     string procName = t->name[0];
     if (FindEntry(procName, 1) != nullptr) {
@@ -319,7 +345,7 @@ SymbolsTable* HeadProcess(Treenode* t) {
     }
     TypeIR* procType = nullptr;
     paramTable* procParam = new paramTable();
-    AttributeIR* procAttri = new AttributeIR(procType, procKind, scope.size() - 1, nullptr, Leveloff);
+    AttributeIR* procAttri = new AttributeIR(procType, procKind, scope.size() - 1, nullptr);
     SymbolsTable* procSymbol = Enter(procName, procAttri, scope[scope.size() - 1]);
     paramTable* search = procParam;
     t->table.emplace_back(procSymbol);
@@ -333,6 +359,12 @@ SymbolsTable* HeadProcess(Treenode* t) {
         if (paramNode->kind.dec == IdK) {
             start = 1;
         }
+        /*如果参数类型是已有类型名，例如：
+        MyType a, b
+        解析时 name 可能是：
+        name[0] = "MyType"
+        name[1] = "a"
+        name[2] = "b"*/
         for (int i = start; i < paramCnt; i++) {
             string paramName = paramNode->name[i];
 
@@ -345,7 +377,7 @@ SymbolsTable* HeadProcess(Treenode* t) {
             AccessKind ac = paramNode->attr.paramt == ParamTcate::valparamtype ? dir : indir;
             AttributeIR* addAttri = new AttributeIR(addTypeIR, varKind, ac, scope.size() - 1, Leveloff);
             SymbolsTable* fill = Enter(paramName, addAttri, scope[scope.size() - 1]);
-            Leveloff += (ac == dir ? addTypeIR->size : 4);
+            Leveloff += (ac == dir ? addTypeIR->size : 4);//值参：占实际类型大小，变参：占 4，因为保存的是地址
             t->table.emplace_back(fill);
             search->next = new paramTable();
             search = search->next;
@@ -358,9 +390,13 @@ SymbolsTable* HeadProcess(Treenode* t) {
     return procSymbol;
 }
 
+// 前置声明：statement 与 Expr 在后续语义检查中会相互间接调用。
 void statement(Treenode* t);
 
+// 前置声明：表达式类型检查函数，供数组和记录成员访问检查使用。
 TypeIR* Expr(Treenode* t);
+
+// 作用：检查数组变量访问是否合法，并返回数组元素类型。
 TypeIR* arrayVar(Treenode* t) {
     SymbolsTable* symbol = FindEntry(t->name[0], 0);
     t->table.emplace_back(symbol);
@@ -376,6 +412,7 @@ TypeIR* arrayVar(Treenode* t) {
         cout << "line " << t->lineno << " : " << t->name[0] << "不是数组" << endl;
         exit(1);
     }
+    // 比较的是“数组元素类型”和“下标表达式类型”。
     if (symbol->attrIR->idType->More.ArrayAttr.elemTy != Expr(t->child[0].get())) {
         cout << "line " << t->lineno << " :" << t->name[0] << "下标类型不符" << endl;
         exit(1);
@@ -383,6 +420,7 @@ TypeIR* arrayVar(Treenode* t) {
     return symbol->attrIR->idType->More.ArrayAttr.elemTy;
 }
 
+// 作用：在记录类型的域链表中查找指定域名。
 FieldChain* FindField(string idname, FieldChain* head) {
     while (head && idname != head->idName) {
         head = head->next;
@@ -390,6 +428,7 @@ FieldChain* FindField(string idname, FieldChain* head) {
     return head != nullptr ? head : nullptr;
 }
 
+// 作用：检查记录变量成员访问是否合法，并返回成员域的类型。
 TypeIR* recordVar(Treenode* t) {
     SymbolsTable* symbol = FindEntry(t->name[0], 0);
     t->table.emplace_back(symbol);
@@ -414,12 +453,13 @@ TypeIR* recordVar(Treenode* t) {
     return fieldType->unitType;
 }
 
+// 作用：对表达式做语义检查，推导并返回表达式类型。
 TypeIR* Expr(Treenode* t) {
     
     switch (t->kind.exp) {
     case OpK:
         TypeIR* Eptr;
-        if (Expr(t->child[0].get()) != Expr(t->child[1].get())) {
+        if (Expr(t->child[0].get()) != Expr(t->child[1].get())) { //递归检查左右两个子表达式的类型
             cout << "line " << t->lineno << " :" << "表达式类型不兼容" << endl;
             exit(1);
         }
@@ -473,6 +513,7 @@ TypeIR* Expr(Treenode* t) {
     return nullptr;
 }
 
+// 作用：检查 if 语句条件类型，并递归检查 then/else 分支语句。
 void IfStatement(Treenode* t) {
     // Stmt NODE:t
     TreenodePtr& conditionNode = t->child[0];
@@ -495,6 +536,7 @@ void IfStatement(Treenode* t) {
     }
 }
 
+// 作用：检查 while 语句条件类型，并递归检查循环体语句。
 void WhileStatement(Treenode* t) {
     //WhileK Node:t
     TreenodePtr& conditionNode = t->child[0];
@@ -511,6 +553,7 @@ void WhileStatement(Treenode* t) {
     }
 }
 
+// 作用：检查赋值语句左值是否合法，并保证左右两侧类型一致。
 void AssignStatement(Treenode* t) {
     TreenodePtr& child1 = t->child[0];
     TreenodePtr& child2 = t->child[1];
@@ -561,6 +604,7 @@ void AssignStatement(Treenode* t) {
     }
 }
 
+// 作用：检查 read 语句读取对象是否已声明且为变量。
 void ReadStatement(Treenode* t) {
     // ReadK Node:t
     SymbolsTable* symbol = FindEntry(t->name[0], 0);
@@ -576,6 +620,7 @@ void ReadStatement(Treenode* t) {
     t->table.emplace_back(symbol);
 }
 
+// 作用：检查 write 语句输出表达式类型是否为 integer 或 char。
 void WriteStatement(Treenode* t) {
     //WriteK Node:t
     TypeIR* writeType = Expr(t->child[0].get());
@@ -585,6 +630,7 @@ void WriteStatement(Treenode* t) {
     }
 }
 
+// 作用：检查过程调用是否合法，包括过程名存在性和实参与形参类型、个数匹配。
 void CallStatement(Treenode* t) {
     //CallK Node:t
     string procName = t->child[0]->name[0];
@@ -632,6 +678,8 @@ void CallStatement(Treenode* t) {
         exit(1);
     }
 }
+
+// 作用：检查 return 语句是否合法，当前实现禁止在主程序中使用 return。
 void ReturnStatement(Treenode* t) {
     if (scope.size() == 1) {
         cout << "line " << t->lineno<< " : " << "主程序中不能使用return语句" << endl;
@@ -639,6 +687,7 @@ void ReturnStatement(Treenode* t) {
     }
 }
 
+// 作用：根据语句种类分派到对应的语义检查函数。
 void statement(Treenode* t) {
     //StmtK NODE:t
     switch (t->kind.stmt) {
@@ -670,6 +719,7 @@ void statement(Treenode* t) {
     }
 }
 
+// 作用：遍历语句序列节点，逐条进行语义检查。
 void Body(Treenode* t) {
     //StmLK NODE: t
     TreenodePtr& tmp = t->child[0];
@@ -681,6 +731,7 @@ void Body(Treenode* t) {
     }
 }
 
+// 作用：退出当前作用域，销毁作用域栈顶的符号表。
 void DestroyTable() {
     SymbolsTable* search = scope.back();
     delete search;
@@ -689,12 +740,14 @@ void DestroyTable() {
 }
 
 
+// 作用：处理过程声明链，包括局部声明、嵌套过程、过程体和作用域回收。
 void ProcessProc(Treenode* t) {
     //ProcDeck Node:t
     int Savedoff = 0;
     SymbolsTable* proc = nullptr;
     while (t != nullptr) {
         proc = HeadProcess(t);
+        // 保存处理完形参后的当前层偏移；若本过程没有局部变量，这就是最终局部空间大小。
         Savedoff = Leveloff;
         TreenodePtr& tmp1 = t->child[1];
         TreenodePtr& tmp2 = t->child[2];
@@ -706,6 +759,8 @@ void ProcessProc(Treenode* t) {
         }
         if (DecNode != nullptr && DecNode->nodekind == VarK) {
             ProcessVar(DecNode);
+            // 局部变量会继续增加 Leveloff，因此这里更新为“形参 + 局部变量”后的偏移。
+            // 后续递归处理子过程可能修改全局 Leveloff，所以父过程的偏移要先保存下来。
             Savedoff = Leveloff;
             DecNode = DecNode->sibling.get();
         }
@@ -724,6 +779,7 @@ void ProcessProc(Treenode* t) {
     }
 }
 
+// 作用：将标识符种类枚举转换为便于打印的字符串。
 string toIdKind(int enumId) {
     switch (enumId) {
     case typeKind:return "typeKind";
@@ -735,6 +791,7 @@ string toIdKind(int enumId) {
     return "";
 }
 
+// 作用：将变量访问方式枚举转换为便于打印的字符串。
 string toAccessKind(int enumId) {
     if (enumId == indir) {
         return "indir";
@@ -749,6 +806,7 @@ string toAccessKind(int enumId) {
     return "";
 }
 
+// 作用：将类型种类枚举转换为便于打印的字符串。
 string toTypeKind(int enumId) {
     switch (enumId) {
     case IntegerK:return "IntegerK";
@@ -762,6 +820,7 @@ string toTypeKind(int enumId) {
     return "";
 }
 
+// 作用：遍历语法树并打印各节点关联的符号表信息。
 void PrintSymTable(Treenode* t) {
     while (t != nullptr) {
         if (t->table.size() != 0) {
@@ -788,6 +847,7 @@ void PrintSymTable(Treenode* t) {
     }
 }
 
+// 作用：语义分析入口，初始化全局类型和符号表，处理主程序声明与语句体。
 TreenodePtr semanticAnalyze(TreenodePtr&& t)
 {
 	initType();
@@ -796,7 +856,7 @@ TreenodePtr semanticAnalyze(TreenodePtr&& t)
     TreenodePtr& MainProc = t->child[0];
     TreenodePtr& tmp = t->child[1];
     TreenodePtr& BodyNode = t->child[2];
-    SymbolsTable* MainProSymbol = Enter(MainProc->name[0], new AttributeIR(nullptr, procKind, 0, nullptr, Leveloff), scope[0]);
+    SymbolsTable* MainProSymbol = Enter(MainProc->name[0], new AttributeIR(nullptr, procKind, 0, nullptr), scope[0]);
     MainProc->table.emplace_back(MainProSymbol);
     CreateTable();
     Treenode* DecNode=tmp.get();

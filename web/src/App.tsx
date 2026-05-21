@@ -28,6 +28,7 @@ end.`;
 const EMPTY_OUTPUTS: CompilerOutputs = {
   token: '',
   tree: '',
+  midcode: '',
   mips: '',
   error: '',
   stdout: '',
@@ -129,6 +130,10 @@ export default function App() {
     }
     if (file === 'tree') {
       setActiveTab('ast');
+      return;
+    }
+    if (file === 'midcode') {
+      setActiveTab('midcode');
       return;
     }
     if (file === 'mips') {

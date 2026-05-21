@@ -4,10 +4,13 @@
 #include <iostream>
 #include <stack>
 
+// 获取当前正在分析的 Token。
 MyToken& Parser::currentToken() { return tokens[currentIndex]; }
 
+// 前进到下一个 Token；保留最后一个 Token，避免越界访问。
 void Parser::consumeToken() { if (currentIndex < tokens.size() - 1) currentIndex++; }
 
+// 统一记录语法错误，并将错误信息输出到控制台。
 void Parser::logError(ErrorType type, const string& details) {
 		errorLog << "Line " << currentToken().line << ": ";
 		switch (type) {
@@ -24,12 +27,15 @@ void Parser::logError(ErrorType type, const string& details) {
 		errorLog << endl;
 	}
 
+// 构造语法分析器，保存词法分析阶段生成的 Token 序列。
 Parser::Parser(vector<MyToken> tokenList) : tokens(move(tokenList)) {}
 
+// 语法分析入口：从 program 非终结符开始，返回整棵语法树。
 TreenodePtr Parser::parse() {
 		return program();
 	}
 
+// 将词法类型转换成可读字符串，主要用于错误信息。
 std::string Parser::lexTypeToString(LexType type) {
 		switch (type) {
 		case LexType::PROGRAM:    return "PROGRAM";
@@ -77,6 +83,7 @@ std::string Parser::lexTypeToString(LexType type) {
 		}
 	}
 
+// 以深度优先方式遍历语法树，并同时输出到文件和控制台。
 void Parser::printTree(const TreenodePtr& root) {
 		std::ofstream outTree(treeAddr);
 		if (!outTree.is_open()) {
@@ -162,6 +169,7 @@ void Parser::printTree(const TreenodePtr& root) {
 		outTree.close();
 	}
 
+// 解析完整程序：程序头、声明部分、程序体，最后匹配结束点号。
 TreenodePtr Parser::program() {
 		auto root = Treenode::create(Treenodecate::ProK, currentToken().line);
 
@@ -181,6 +189,7 @@ TreenodePtr Parser::program() {
 		return root;
 	}
 
+// 解析程序头：PROGRAM 后跟程序名标识符。
 TreenodePtr Parser::programHead() {
 		auto head = Treenode::create(Treenodecate::PheadK, currentToken().line);
 		match(PROGRAM);
@@ -191,6 +200,7 @@ TreenodePtr Parser::programHead() {
 		return head;
 	}
 
+// 解析声明部分，并按类型声明、变量声明、过程声明的顺序组织兄弟节点。
 TreenodePtr Parser::declarePart() {
 		TreenodePtr typeP = nullptr, varP = nullptr;
 
@@ -235,6 +245,7 @@ TreenodePtr Parser::declarePart() {
 		return typeP;
 	}
 
+// 解析可选的类型声明部分；如果遇到 VAR/PROCEDURE/BEGIN，说明类型声明为空。
 TreenodePtr Parser::typeDecpart() {
 		TreenodePtr t = nullptr;
 
@@ -256,6 +267,7 @@ TreenodePtr Parser::typeDecpart() {
 		return t;
 	}
 
+// 匹配 TYPE 关键字并解析类型声明列表。
 TreenodePtr Parser::typeDec() {
 		match(TYPE);
 		TreenodePtr t = typeDecList();
@@ -265,17 +277,19 @@ TreenodePtr Parser::typeDec() {
 		return t;
 	}
 
+// 解析一条类型声明：类型名 = 类型定义 ;。
 TreenodePtr Parser::typeDecList() {
 		auto t = Treenode::create(Treenodecate::DecK, currentToken().line);
 		typeId(t);
 		match(EQ);
 		typeDef(t);
-		match(strI);
+		match(strI);//分号
 		TreenodePtr p = typeDecMore();
 		if (p)t->addSibling(move(p));
 		return t;
 	}
 
+// 解析后续类型声明；多个声明通过 sibling 链接。
 TreenodePtr Parser::typeDecMore() {
 		TreenodePtr t = nullptr;
 
@@ -296,11 +310,13 @@ TreenodePtr Parser::typeDecMore() {
 		return t;
 	}
 
+// 解析类型标识符，并记录到当前声明节点的 name 列表中。
 void Parser::typeId(TreenodePtr& t) {
 		if (currentToken().lexType == ID && t != nullptr)t->addName(currentToken().str);
 		match(ID);
 	}
 
+// 解析类型定义，支持基本类型、数组/记录结构类型和已有类型名。
 void Parser::typeDef(TreenodePtr& t) {
 		if (!t) {
 			logError(ErrorType::SyntaxError, "TypeDef called with null node");
@@ -329,6 +345,7 @@ void Parser::typeDef(TreenodePtr& t) {
 		}
 	}
 
+// 解析基本类型 INTEGER 或 CHAR，并设置声明节点的具体类型。
 void Parser::baseType(TreenodePtr& t) {
 		if (currentToken().lexType == LexType::INTEGER) {
 			t->kind.dec = DecKcate::IntegerK;  // 假设枚举值正确映射
@@ -340,16 +357,18 @@ void Parser::baseType(TreenodePtr& t) {
 		}
 	}
 
+// 解析结构类型入口，根据当前 Token 分派到数组或记录类型。
 void Parser::structureType(TreenodePtr& t) {
 		if (currentToken().lexType == LexType::ARRAY) {
-			arrayType(t);  // 假设已实现 arrayType 函数
+			arrayType(t); 
 		}
 		else if (currentToken().lexType == LexType::RECORD) {
 			t->kind.dec = DecKcate::RecordK;  // 先设置类型再处理子结构
-			recType(t);    // 假设已实现 recType 函数
+			recType(t);   
 		}
 	}
 
+// 解析数组类型：ARRAY [下界..上界] OF 基本类型。
 void Parser::arrayType(TreenodePtr& t) {
 		match(LexType::ARRAY);
 		match(LexType::LMIDPAREN);
@@ -369,6 +388,7 @@ void Parser::arrayType(TreenodePtr& t) {
 		t->kind.dec = DecKcate::ArrayK;
 	}
 
+// 解析记录类型：RECORD 字段声明列表 END。
 void Parser::recType(TreenodePtr& t) {
 		match(LexType::RECORD);
 		TreenodePtr p = fieldDecList();
@@ -381,6 +401,7 @@ void Parser::recType(TreenodePtr& t) {
 		match(LexType::END);
 	}
 
+// 解析记录中的字段声明列表，字段可以是基本类型或数组类型。
 TreenodePtr Parser::fieldDecList() {
 		auto t = Treenode::create(Treenodecate::DecK, currentToken().line);
 		TreenodePtr p = nullptr;
@@ -412,6 +433,7 @@ TreenodePtr Parser::fieldDecList() {
 		return t;
 	}
 
+// 解析更多字段声明；遇到 END 表示记录字段声明结束。
 TreenodePtr Parser::fieldDecMore() {
 		TreenodePtr t = nullptr;
 
@@ -433,6 +455,7 @@ TreenodePtr Parser::fieldDecMore() {
 		return t;
 	}
 
+// 解析普通标识符列表，用于记录字段声明等位置。
 void Parser::idList(TreenodePtr& t) {
 		if (currentToken().lexType == LexType::ID) {
 			t->addName(currentToken().str);  // 使用 addName 方法
@@ -441,6 +464,7 @@ void Parser::idList(TreenodePtr& t) {
 		idMore(t);  // 处理后续标识符
 	}
 
+// 解析逗号分隔的后续标识符。
 void Parser::idMore(TreenodePtr& t) {
 		if (currentToken().lexType == LexType::strI) {
 			return;  // 分号由上层函数处理
@@ -458,6 +482,7 @@ void Parser::idMore(TreenodePtr& t) {
 		}
 	}
 
+// 解析可选的变量声明部分；遇到 PROCEDURE/BEGIN 表示变量声明为空。
 TreenodePtr Parser::varDecpart() {
 		TreenodePtr t = nullptr;
 
@@ -477,6 +502,7 @@ TreenodePtr Parser::varDecpart() {
 		return t;
 	}
 
+// 匹配 VAR 关键字并解析变量声明列表。
 TreenodePtr Parser::varDec() {
 		match(LexType::VAR);
 		TreenodePtr t = varDecList();
@@ -484,6 +510,7 @@ TreenodePtr Parser::varDec() {
 		return t;
 	}
 
+// 解析一条变量声明：类型定义 变量名列表 ;。
 TreenodePtr Parser::varDecList() {
 		auto t = Treenode::create(Treenodecate::DecK, currentToken().line);
 		TreenodePtr p = nullptr;
@@ -495,6 +522,7 @@ TreenodePtr Parser::varDecList() {
 		return t;
 	}
 
+// 解析后续变量声明；多个变量声明通过 sibling 链接。
 TreenodePtr Parser::varDecMore() {
 		TreenodePtr t = nullptr;
 
@@ -520,6 +548,7 @@ TreenodePtr Parser::varDecMore() {
 		return t;
 	}
 
+// 解析变量名列表的第一个标识符。
 void Parser::varIdList(TreenodePtr& t) {
 		if (currentToken().lexType == LexType::ID) {
 			t->addName(currentToken().str);  // 自动管理 idnum 和 name
@@ -532,6 +561,7 @@ void Parser::varIdList(TreenodePtr& t) {
 		varIdMore(t);  // 处理后续标识符
 	}
 
+// 解析逗号分隔的后续变量名。
 void Parser::varIdMore(TreenodePtr& t) {
 		if (currentToken().lexType == LexType::strI) {
 			return;
@@ -549,6 +579,7 @@ void Parser::varIdMore(TreenodePtr& t) {
 		}
 	}
 
+// 解析可选的过程声明部分；遇到 BEGIN 表示没有更多过程声明。
 TreenodePtr Parser::procDecpart() {
 		TreenodePtr t = nullptr;
 
@@ -567,6 +598,7 @@ TreenodePtr Parser::procDecpart() {
 		return t;
 	}
 
+// 解析过程声明，包括过程名、形参、局部声明和过程体。
 TreenodePtr Parser::procDec() {
 		auto t = Treenode::create(Treenodecate::ProcDecK, currentToken().line);
 		match(LexType::PROCEDURE);
@@ -574,9 +606,9 @@ TreenodePtr Parser::procDec() {
 			t->addName(currentToken().str);  // 存储过程名
 			match(LexType::ID);
 		}
-		match(LexType::LPAREN);
-		paramList(t);
-		match(LexType::RPAREN);
+		match(LexType::LPAREN);//左括号
+		paramList(t);    //参数列表，解析括号里的参数，并把参数声明挂到 t 的第 0 个子节点
+		match(LexType::RPAREN);//右括号
 		match(LexType::strI);
 		t->addChild(1, procDecPart());  // 第二个子节点
 		// 解析过程体 (BEGIN-END 块)
@@ -585,6 +617,7 @@ TreenodePtr Parser::procDec() {
 		return t;
 	}
 
+// 解析过程形参列表，并挂接为过程声明节点的第 0 个子节点。
 void Parser::paramList(TreenodePtr& t) {
 		TreenodePtr p = nullptr;
 
@@ -609,6 +642,7 @@ void Parser::paramList(TreenodePtr& t) {
 		}
 	}
 
+// 解析形参声明列表；多组形参之间用分号分隔。
 TreenodePtr Parser::paramDecList() {
 		TreenodePtr t = param();         // 第一个参数
 		TreenodePtr p = paramMore();     // 更多参数
@@ -620,6 +654,7 @@ TreenodePtr Parser::paramDecList() {
 		return t;
 	}
 
+// 解析后续形参声明；遇到右括号表示形参列表结束。
 TreenodePtr Parser::paramMore() {
 		TreenodePtr t = nullptr;
 		if (currentToken().lexType == LexType::RPAREN) {
@@ -637,6 +672,7 @@ TreenodePtr Parser::paramMore() {
 		return t;
 	}
 
+// 解析一组形参声明，并区分值参和 VAR 变参。
 TreenodePtr Parser::param() {
 		auto t = Treenode::create(Treenodecate::DecK, currentToken().line);
 		if (currentToken().lexType == LexType::INTEGER ||
@@ -657,6 +693,7 @@ TreenodePtr Parser::param() {
 		return t;
 	}
 
+// 解析同一类型下的形参名列表。
 void Parser::formList(TreenodePtr& t) {
 		if (currentToken().lexType == LexType::ID) {
 			t->addName(currentToken().str);  // 存储参数名
@@ -665,6 +702,7 @@ void Parser::formList(TreenodePtr& t) {
 		fidMore(t);  // 处理更多参数
 	}
 
+// 解析逗号分隔的后续形参名。
 void Parser::fidMore(TreenodePtr& t) {
 		if (currentToken().lexType == LexType::strI ||
 			currentToken().lexType == LexType::RPAREN) {
@@ -681,10 +719,12 @@ void Parser::fidMore(TreenodePtr& t) {
 		}
 	}
 
+// 解析过程内部的声明部分，复用普通声明部分逻辑。
 TreenodePtr Parser::procDecPart() {
 		return declarePart();
 	}
 
+// 解析过程体，内部结构与主程序体相同。
 TreenodePtr Parser::procBody() {
 		TreenodePtr t = programBody();  // 复用 programBody 逻辑
 
@@ -696,6 +736,7 @@ TreenodePtr Parser::procBody() {
 		return t;
 	}
 
+// 解析 BEGIN...END 包围的语句序列节点。
 TreenodePtr Parser::programBody() {
 		auto t = Treenode::create(Treenodecate::StmLK, currentToken().line);
 		match(LexType::BEGIN);
@@ -704,6 +745,7 @@ TreenodePtr Parser::programBody() {
 		return t;
 	}
 
+// 解析语句序列，第一条语句作为链表头，后续语句挂到 sibling。
 TreenodePtr Parser::stmList() {
 		TreenodePtr t = stm();          // 解析第一个语句
 		TreenodePtr p = stmMore();      // 解析后续语句
@@ -715,6 +757,7 @@ TreenodePtr Parser::stmList() {
 		return t;
 	}
 
+// 解析语句序列中的后续语句；遇到块结束符时停止。
 TreenodePtr Parser::stmMore() {
 		TreenodePtr t = nullptr;
 
@@ -738,6 +781,7 @@ TreenodePtr Parser::stmMore() {
 		return t;
 	}
 
+// 根据当前 Token 判断具体语句类型，并创建对应语句节点。
 TreenodePtr Parser::stm() {
 		TreenodePtr t = nullptr;
 		switch (currentToken().lexType) {
@@ -777,6 +821,7 @@ TreenodePtr Parser::stm() {
 		return t;
 	}
 
+// 对 ID 开头的语句进行二次判定：赋值语句或过程调用语句。
 void Parser::assCall(TreenodePtr& t) {
 		match(LexType::ID);
 		if (currentToken().lexType == LexType::ASSIGN ||
@@ -798,6 +843,7 @@ void Parser::assCall(TreenodePtr& t) {
 		}
 	}
 
+// 解析 IF 条件语句，child[0] 为条件，child[1] 为 THEN 分支，child[2] 为 ELSE 分支。
 TreenodePtr Parser::conditionalStm() {
 		auto t = Treenode::create(Treenodecate::StmtK, currentToken().line);
 		t->kind.stmt = StmtKcate::IfK;
@@ -813,6 +859,7 @@ TreenodePtr Parser::conditionalStm() {
 		return t;
 	}
 
+// 解析 WHILE 循环语句，child[0] 为循环条件，child[1] 为循环体。
 TreenodePtr Parser::loopStm() {
 		auto t = Treenode::create(Treenodecate::StmtK, currentToken().line);
 		t->kind.stmt = StmtKcate::WhileK;
@@ -826,6 +873,7 @@ TreenodePtr Parser::loopStm() {
 		return t;
 	}
 
+// 解析 RETURN 语句；当前实现不解析返回值表达式。
 TreenodePtr Parser::returnStm() {
 		auto t = Treenode::create(Treenodecate::StmtK, currentToken().line);
 		t->kind.stmt = StmtKcate::ReturnK;
@@ -837,6 +885,7 @@ TreenodePtr Parser::returnStm() {
 		return t;
 	}
 
+// 解析 READ 输入语句，并记录被读取的变量名。
 TreenodePtr Parser::inputStm() {
 		auto t = Treenode::create(Treenodecate::StmtK, currentToken().line);
 		t->kind.stmt = StmtKcate::ReadK;
@@ -851,6 +900,7 @@ TreenodePtr Parser::inputStm() {
 		return t;
 	}
 
+// 解析 WRITE 输出语句，输出内容作为表达式子节点保存。
 TreenodePtr Parser::outputStm() {
 		auto t = Treenode::create(Treenodecate::StmtK, currentToken().line);
 		t->kind.stmt = StmtKcate::WriteK;
@@ -862,6 +912,7 @@ TreenodePtr Parser::outputStm() {
 		return t;
 	}
 
+// 解析赋值语句余部：变量后缀、赋值符号以及右侧表达式。
 void Parser::assignmentRest(TreenodePtr& t) {
 		variMore(t->child[0]);  // 假设 variMore 已实现
 
@@ -871,6 +922,7 @@ void Parser::assignmentRest(TreenodePtr& t) {
 		t->addChild(1, expression());
 	}
 
+// 解析过程调用余部：括号中的实参列表。
 void Parser::callStmRest(TreenodePtr& t) {
 		match(LexType::LPAREN);
 		// 解析实际参数列表作为第二个子节点
@@ -879,6 +931,7 @@ void Parser::callStmRest(TreenodePtr& t) {
 		match(LexType::RPAREN);
 	}
 
+// 解析实参列表；多个实参通过 sibling 链接。
 TreenodePtr Parser::actParamList() {
 		TreenodePtr t = nullptr;
 		if (currentToken().lexType == LexType::RPAREN) {
@@ -901,6 +954,7 @@ TreenodePtr Parser::actParamList() {
 		return t;
 	}
 
+// 解析逗号分隔的后续实参。
 TreenodePtr Parser::actParamMore() {
 		TreenodePtr t = nullptr;
 		if (currentToken().lexType == LexType::RPAREN) {
@@ -913,6 +967,7 @@ TreenodePtr Parser::actParamMore() {
 		return t;
 	}
 
+// 解析表达式：simpleExp 或 simpleExp 比较运算符 simpleExp。
 TreenodePtr Parser::expression() {
 		int line = currentToken().line;
 		TreenodePtr t = simpleExp();  // 解析左操作数
@@ -937,6 +992,7 @@ TreenodePtr Parser::expression() {
 		return t;
 	}
 
+// 解析简单表达式，按左结合方式处理连续的加减运算。
 TreenodePtr Parser::simpleExp() {
 		int line = currentToken().line;
 		TreenodePtr t = term();  // 解析第一个项
@@ -962,6 +1018,7 @@ TreenodePtr Parser::simpleExp() {
 		return t;
 	}
 
+// 解析项，按左结合方式处理连续的乘除运算。
 TreenodePtr Parser::term() {
 		int line = currentToken().line;
 		TreenodePtr t = factor();  // 解析第一个因子
@@ -987,6 +1044,7 @@ TreenodePtr Parser::term() {
 		return t;
 	}
 
+// 解析因子：整型常量、变量引用或括号表达式。
 TreenodePtr Parser::factor() {
 		TreenodePtr t = nullptr;
 		int line = currentToken().line;
@@ -1000,7 +1058,7 @@ TreenodePtr Parser::factor() {
 			break;
 		}
 		case LexType::ID:      // 变量或函数调用
-			t = variable();    // 假设 variable() 返回 TreenodePtr
+			t = variable();   
 			break;
 		case LexType::LPAREN:  // 括号表达式
 			match(LexType::LPAREN);
@@ -1015,6 +1073,7 @@ TreenodePtr Parser::factor() {
 		return t;
 	}
 
+// 解析变量引用，并继续识别数组下标或记录字段访问。
 TreenodePtr Parser::variable() {
 		auto t = Treenode::create(Treenodecate::ExpK, currentToken().line);
 		t->kind.exp = ExpKcate::IdEK;  // 默认为基本标识符
@@ -1030,6 +1089,7 @@ TreenodePtr Parser::variable() {
 		return t;
 	}
 
+// 解析变量后缀：数组成员访问 [exp] 或记录成员访问 .field。
 void Parser::variMore(TreenodePtr& t) {
 		// 检查可能的结束符号（不需要处理的情况）
 		if (currentToken().lexType == LexType::ASSIGN ||
@@ -1074,6 +1134,7 @@ void Parser::variMore(TreenodePtr& t) {
 		}
 	}
 
+// 解析记录字段变量名，并处理字段后可能出现的数组下标。
 TreenodePtr Parser::fieldVar() {
 		auto t = Treenode::create(Treenodecate::ExpK, currentToken().line);
 		t->kind.exp = ExpKcate::IdEK;
@@ -1088,6 +1149,7 @@ TreenodePtr Parser::fieldVar() {
 		return t;
 	}
 
+// 解析记录字段后的后缀；当前主要支持字段数组成员访问。
 void Parser::fieldVarMore(TreenodePtr& t) {
 		if (currentToken().lexType == LexType::ASSIGN ||
 			currentToken().lexType == LexType::TIMES ||
@@ -1122,6 +1184,7 @@ void Parser::fieldVarMore(TreenodePtr& t) {
 		}
 	}
 
+// 匹配期望的词法类型；匹配成功则消费 Token，失败则报语法错误。
 bool Parser::match(LexType expected) {
 		if (currentToken().lexType == expected) {
 			consumeToken();

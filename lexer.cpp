@@ -141,23 +141,31 @@ static bool isSeparator(char ch) {
 
 // 词法分析主函数
 bool lexicalAnalysis() {
+	// line 记录当前扫描到的源程序行号，error 记录本次扫描过程中是否出现词法错误。
 	int line = 1;
 	bool error = false;
+
+	// 打开源文件，后面会从这个文件中一个字符一个字符地读取。
 	FILE* fp = fopen(srcAddr, "r");
 	if (fp == nullptr) {
 		cout << "打开源文件失败" << endl;
 		return true;
 	}
 
+	// ch 表示当前正在处理的字符，word 用来临时拼接一个完整的单词。
 	char ch = fgetc(fp);
 	string word = "";
 
+	// 核心扫描循环：只要没有读到文件结束符 EOF，就持续分析当前字符。
 	while (ch != EOF) {
+		// 以字母开头：可能是标识符，也可能是保留字。
+		// 例如 abc 会被识别成 ID，program 会在 MyToken 构造函数里被识别成 PROGRAM。
 		if (isLetter(ch)) {
 			word = "";
 			word += ch;
 			ch = fgetc(fp);
 
+			// 标识符/保留字后面可以继续跟字母或数字，所以一直读到不满足条件为止。
 			while (isLetter(ch) || isDigit(ch)) {
 				word += ch;
 				ch = fgetc(fp);
@@ -166,11 +174,13 @@ bool lexicalAnalysis() {
 			MyToken token(line, word);
 			tokenList.push_back(token);
 		}
+		// 以数字开头：正常情况是整数常量；如果后面混入字母，则认为是错误单词。
 		else if (isDigit(ch)) {
 			word = "";
 			word += ch;
 			ch = fgetc(fp);
 
+			// 这里先把连续的数字/字母全部读出来，后面再判断是否包含字母。
 			while (isDigit(ch) || isLetter(ch)) {
 				word += ch;
 				ch = fgetc(fp);
@@ -181,6 +191,7 @@ bool lexicalAnalysis() {
 				if (isLetter(c)) {
 					flag = false;
 					error = true;
+					// 例如 123abc 这种“数字开头又含有字母”的串不是合法整数。
 					MyToken token(line, "数字开头的单词！", ERROR);
 					tokenList.push_back(token);
 					break;
@@ -188,10 +199,12 @@ bool lexicalAnalysis() {
 			}
 
 			if (flag) {
+				// 没有字母，说明是合法整数常量 INTC。
 				MyToken token(line, word, INTC);
 				tokenList.push_back(token);
 			}
 		}
+		// 运算符：这里处理的是单字符运算符，如 +、-、*、/、<、=。
 		else if (isOperator(ch)) {
 			string tmp = "";
 			tmp += ch;
@@ -199,10 +212,12 @@ bool lexicalAnalysis() {
 			tokenList.push_back(token);
 			ch = fgetc(fp);
 		}
+		// 分隔符或特殊符号：包括括号、分号、逗号、点、单引号、冒号等。
 		else if (isSeparator(ch)) {
 			word = "";
 
 			if (ch == '{') {
+				// 花括号里的内容当作注释，直接跳过；如果注释里换行，需要更新行号。
 				while (ch != '}') {
 					ch = fgetc(fp);
 					if (ch == '\n') line++;
@@ -210,6 +225,7 @@ bool lexicalAnalysis() {
 				ch = fgetc(fp);
 			}
 			else if (ch == '.') {
+				// 点号可能是单独的 "."，也可能和下一个点组成范围符号 ".."。
 				word += ch;
 				if ((ch = fgetc(fp)) == '.') {
 					word += ch;
@@ -223,6 +239,7 @@ bool lexicalAnalysis() {
 				}
 			}
 			else if (ch == '\'') {
+				// 单引号包起来的是字符常量，例如 'a'，这里只把中间的内容作为 CHARC。
 				string tmp = "";
 				while ((ch = fgetc(fp)) != '\'') {
 					tmp += ch;
@@ -232,6 +249,7 @@ bool lexicalAnalysis() {
 				ch = fgetc(fp);
 			}
 			else if (ch == ':') {
+				// 冒号必须和等号组成赋值符号 ":="，单独的 ":" 在这里认为是错误。
 				word += ch;
 				if ((ch = fgetc(fp)) == '=') {
 					word += ch;
@@ -247,6 +265,7 @@ bool lexicalAnalysis() {
 				}
 			}
 			else {
+				// 其他普通分隔符直接生成对应 token，如 ;、,、(、)、[、]。
 				string tmp = "";
 				tmp += ch;
 				MyToken token(line, tmp);
@@ -254,6 +273,7 @@ bool lexicalAnalysis() {
 				ch = fgetc(fp);
 			}
 		}
+		// 空白字符不生成 token；换行需要增加 line，方便后续报错定位。
 		else if (isBlank(ch)) {
 			if (ch == '\n') {
 				line++;
@@ -261,6 +281,7 @@ bool lexicalAnalysis() {
 			ch = fgetc(fp);
 		}
 		else {
+			// 以上规则都无法识别的字符，统一记为未知字符错误。
 			error = true;
 			MyToken token(line, "未知字符", ERROR);
 			tokenList.push_back(token);
@@ -268,6 +289,7 @@ bool lexicalAnalysis() {
 		}
 	}
 
+	// 文件读完后，手动补一个 ENDFILE token，告诉后续语法分析“输入结束了”。
 	MyToken token(++line, "ENDFILE", ENDFILE);
 	tokenList.push_back(token);
 	fclose(fp);

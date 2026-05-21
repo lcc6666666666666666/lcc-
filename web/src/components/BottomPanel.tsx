@@ -21,6 +21,7 @@ const tabs: Array<{ key: BottomTab; label: string }> = [
   { key: 'problems', label: 'Problems' },
   { key: 'tokens', label: 'Tokens' },
   { key: 'ast', label: 'AST' },
+  { key: 'midcode', label: 'Midcode' },
   { key: 'mips', label: 'MIPS' },
   { key: 'console', label: 'Console' },
   { key: 'raw', label: 'Raw Files' },
@@ -29,6 +30,7 @@ const tabs: Array<{ key: BottomTab; label: string }> = [
 const rawFiles: Array<{ key: SourceFileKey; label: string }> = [
   { key: 'token', label: 'token.txt' },
   { key: 'tree', label: 'tree.txt' },
+  { key: 'midcode', label: 'midcode.txt' },
   { key: 'mips', label: 'mips.txt' },
   { key: 'error', label: 'error.txt' },
 ];
@@ -64,6 +66,13 @@ export default function BottomPanel({
         {activeTab === 'problems' && <ProblemsPanel diagnostics={diagnostics} onSelectLine={onSelectLine} />}
         {activeTab === 'tokens' && <TokenTable rows={tokenRows} onSelectLine={onSelectLine} />}
         {activeTab === 'ast' && <AstTree nodes={astNodes} rawText={outputs.tree} />}
+        {activeTab === 'midcode' && (
+          <div className="code-panel">
+            <div className="code-panel__editor">
+              <ReadonlyCodePane value={outputs.midcode} language="plaintext" emptyText="No midcode output yet" />
+            </div>
+          </div>
+        )}
         {activeTab === 'mips' && (
           <div className="code-panel">
             <div className="panel-tools panel-tools--right">
@@ -124,6 +133,9 @@ function rawValue(file: SourceFileKey, outputs: CompilerOutputs) {
   }
   if (file === 'tree') {
     return outputs.tree;
+  }
+  if (file === 'midcode') {
+    return outputs.midcode;
   }
   if (file === 'mips') {
     return outputs.mips;

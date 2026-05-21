@@ -9,6 +9,7 @@ const files: Array<{ key: SourceFileKey; label: string; kind: string }> = [
   { key: 'source', label: 'source.snl', kind: 'SNL' },
   { key: 'token', label: 'token.txt', kind: 'TOK' },
   { key: 'tree', label: 'tree.txt', kind: 'AST' },
+  { key: 'midcode', label: 'midcode.txt', kind: 'IR' },
   { key: 'mips', label: 'mips.txt', kind: 'ASM' },
   { key: 'error', label: 'error.txt', kind: 'ERR' },
 ];

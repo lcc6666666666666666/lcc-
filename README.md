@@ -21,10 +21,6 @@ semantic.h / semantic.cpp 符号表、类型信息、语义检查
 codegen.h / codegen.cpp   MIPS 目标代码生成、mips.txt 输出
 main.cpp                  编译流程入口
 
-1.h                       兼容旧 include 的汇总头文件
-1.cpp                     旧单文件入口已拆分，仅保留说明
-2.h                       兼容旧目标代码头文件名
-
 source.txt                源程序输入
 token.txt                 词法分析输出
 tree.txt                  语法树输出
@@ -35,7 +31,7 @@ error.txt                 错误信息输出
 ## 构建
 
 ```bash
-g++ -std=c++17 -g main.cpp lexer.cpp parser.cpp semantic.cpp codegen.cpp -o compiler
+g++ -std=c++17 -g main.cpp lexer.cpp parser.cpp semantic.cpp midcode.cpp codegen.cpp -o compiler
 ```
 
 VS Code 的默认构建任务也已经改为编译上述多个源文件，并输出 `compiler.exe`。

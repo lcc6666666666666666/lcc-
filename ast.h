@@ -31,8 +31,8 @@ enum class ParamTcate {	//valparamtype或者varparamtype,表示过程的参数�
 };
 
 enum class Varkind {	//变量的类别
-	IdV, ArrayMembV, FieldMembV
-};
+	IdV , ArrayMembV, FieldMembV
+};//普通变量
 
 enum class ExpType {	//语法树节点的检查类型
 	Void, Integer, Boolean

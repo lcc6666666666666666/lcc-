@@ -10,7 +10,7 @@ const outputName = process.platform === 'win32' ? 'compiler.exe' : 'compiler';
 const outputPath = path.join(outputDir, outputName);
 const compilerOutputArg = path.join('build', 'web-compiler', outputName);
 
-const sources = ['main.cpp', 'lexer.cpp', 'parser.cpp', 'semantic.cpp', 'codegen.cpp'];
+const sources = ['main.cpp', 'lexer.cpp', 'parser.cpp', 'semantic.cpp', 'midcode.cpp', 'codegen.cpp'];
 
 async function ensureSourcesExist() {
   const missing = [];

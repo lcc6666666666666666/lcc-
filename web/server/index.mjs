@@ -166,6 +166,7 @@ async function collectOutputs(tempDir, stdout = '', stderr = '') {
   return {
     token: await readText(path.join(tempDir, 'token.txt')),
     tree: await readText(path.join(tempDir, 'tree.txt')),
+    midcode: await readText(path.join(tempDir, 'midcode.txt')),
     mips: await readText(path.join(tempDir, 'mips.txt')),
     error: await readText(path.join(tempDir, 'error.txt')),
     stdout,
@@ -185,6 +186,7 @@ function emptyOutputs() {
   return {
     token: '',
     tree: '',
+    midcode: '',
     mips: '',
     error: '',
     stdout: '',
