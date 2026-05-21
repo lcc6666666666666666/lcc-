@@ -801,13 +801,17 @@ TreenodePtr Parser::stm() {
 			t = outputStm();
 			break;
 		case LexType::ID: {
+			// f 是当前语句的根节点；ID 开头的语句后续会被 assCall 判定为赋值语句或过程调用语句。
 			auto f = Treenode::create(Treenodecate::StmtK, currentToken().line);
+			// t1 是 f 的第 0 个孩子，先把开头的标识符保存成一个变量表达式节点。
 			auto t1 = Treenode::create(Treenodecate::ExpK, currentToken().line);
 			t1->kind.exp = ExpKcate::IdEK;
 			t1->attr.ExpAttr.varkind = Varkind::IdV;
 			t1->addName(currentToken().str); // 存储标识符名称
 			f->addChild(0, move(t1));
+			// assCall 会消费这个 ID 后面的符号，并设置 f->kind.stmt 为 AssignK 或 CallK。
 			assCall(f);
+			// t 是当前 statement() 最终返回的节点；这里接管 f，返回完整的语句子树。
 			t = move(f);
 			break;
 		}

@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <string>
 
 // 作用：构造记录类型的一个域节点，保存域名、域类型和域内偏移。
 FieldChain::fieldChain(string idName, TypeIR* unitType, int off) :idName(idName), unitType(unitType), off(off), next(nullptr) {
@@ -117,6 +118,91 @@ AttributeIR::attributeIR() {}
 
 TypeIR* intPtr, * charPtr, *boolPtr;
 
+// 作用：把内部类型转换成更清楚的错误提示文本。
+static string typeToText(TypeIR* type) {
+    if (type == nullptr) {
+        return "void";
+    }
+    switch (type->typeKind) {
+    case IntegerK:
+        return "integer";
+    case CharK:
+        return "char";
+    case BoolK:
+        return "bool";
+    case ArrayK:
+        return "array[" + to_string(type->More.ArrayAttr.low) + ".." +
+            to_string(type->More.ArrayAttr.up) + "] of " +
+            typeToText(type->More.ArrayAttr.elemTy);
+    case RecordK:
+        return "record";
+    case IdK:
+        return "type-id";
+    default:
+        return "unknown";
+    }
+}
+
+// 作用：把运算符转换成错误提示中可读的文本。
+static string opToText(LexType op) {
+    switch (op) {
+    case LT:
+        return "<";
+    case EQ:
+        return "=";
+    case PLUS:
+        return "+";
+    case MINUS:
+        return "-";
+    case TIMES:
+        return "*";
+    case OVER:
+        return "/";
+    default:
+        return "unknown";
+    }
+}
+
+// 作用：如果表达式是可在编译期计算的整型常量表达式，则计算出它的值。
+static bool tryConstIntValue(Treenode* t, int& value) {
+    if (t == nullptr || t->nodekind != ExpK) {
+        return false;
+    }
+    switch (t->kind.exp) {
+    case ConstK:
+        value = t->attr.ExpAttr.val;
+        return true;
+    case OpK: {
+        int leftValue = 0, rightValue = 0;
+        if (!tryConstIntValue(t->child[0].get(), leftValue) ||
+            !tryConstIntValue(t->child[1].get(), rightValue)) {
+            return false;
+        }
+        switch (t->attr.ExpAttr.op) {
+        case PLUS:
+            value = leftValue + rightValue;
+            return true;
+        case MINUS:
+            value = leftValue - rightValue;
+            return true;
+        case TIMES:
+            value = leftValue * rightValue;
+            return true;
+        case OVER:
+            if (rightValue == 0) {
+                return false;
+            }
+            value = leftValue / rightValue;
+            return true;
+        default:
+            return false;
+        }
+    }
+    default:
+        return false;
+    }
+}
+
 // 作用：初始化系统内置的 integer、char、bool 类型对象。
 void initType() {
     intPtr = new TypeIR(IntegerK);
@@ -182,7 +268,8 @@ TypeIR* arrayType(Treenode* t, string name) {
     int low = t->attr.ArrayAttr.low, up = t->attr.ArrayAttr.up;
     if (low > up) {
         
-        cout << "line " << t->lineno << ": " << name << " :array下标越界" << endl;
+        cout << "line " << t->lineno << ": " << name << "数组声明上下界非法："
+            << low << ".." << up << endl;
         exit(1);
     }
 
@@ -204,9 +291,12 @@ TypeIR* arrayType(Treenode* t, string name) {
 TypeIR* recordType(Treenode* t, string name) {
     TreenodePtr& tmp = t->child[0];
 
+    // 用哑头结点构造记录域链表，off 表示当前成员在 record 内的相对偏移。
     int off = 0;
     FieldChain* search = new FieldChain(), * body = search;
     Treenode* recordMember=tmp.get();
+
+    // 逐个处理 record 的成员声明节点，并把同一声明中的多个成员依次加入域链。
     while (recordMember != nullptr) {
 
         if (recordMember->kind.dec == IntegerK) {
@@ -229,6 +319,8 @@ TypeIR* recordType(Treenode* t, string name) {
             for (string memName : recordMember->name) {
                 search->next = new FieldChain(memName, arrayType(recordMember, memName), off);
                 search = search->next;
+
+                // 数组成员整体占用 元素个数 * 元素大小，偏移直接跳过整个数组空间。
                 int size;
                 switch (recordMember->attr.ArrayAttr.childType) {
                 case IntegerK:size = 4;
@@ -246,6 +338,8 @@ TypeIR* recordType(Treenode* t, string name) {
 
         recordMember = recordMember->sibling.get();
     }
+
+    // 删除哑头结点，body 指向真正的第一个记录域。
     search = body;
     body = body->next;
     delete search;
@@ -412,9 +506,21 @@ TypeIR* arrayVar(Treenode* t) {
         cout << "line " << t->lineno << " : " << t->name[0] << "不是数组" << endl;
         exit(1);
     }
-    // 比较的是“数组元素类型”和“下标表达式类型”。
-    if (symbol->attrIR->idType->More.ArrayAttr.elemTy != Expr(t->child[0].get())) {
-        cout << "line " << t->lineno << " :" << t->name[0] << "下标类型不符" << endl;
+    TypeIR* indexType = Expr(t->child[0].get());
+    if (indexType != intPtr) {
+        cout << "line " << t->lineno << " :数组" << t->name[0]
+            << "的下标类型必须是integer，实际为" << typeToText(indexType) << endl;
+        exit(1);
+    }
+
+    int indexValue = 0;
+    int low = symbol->attrIR->idType->More.ArrayAttr.low;
+    int up = symbol->attrIR->idType->More.ArrayAttr.up;
+    if (tryConstIntValue(t->child[0].get(), indexValue) &&
+        (indexValue < low || indexValue > up)) {
+        cout << "line " << t->lineno << " :数组" << t->name[0]
+            << "下标越界，下标值为" << indexValue
+            << "，合法范围为[" << low << ".." << up << "]" << endl;
         exit(1);
     }
     return symbol->attrIR->idType->More.ArrayAttr.elemTy;
@@ -457,10 +563,16 @@ TypeIR* recordVar(Treenode* t) {
 TypeIR* Expr(Treenode* t) {
     
     switch (t->kind.exp) {
-    case OpK:
+    case OpK: {
         TypeIR* Eptr;
-        if (Expr(t->child[0].get()) != Expr(t->child[1].get())) { //递归检查左右两个子表达式的类型
-            cout << "line " << t->lineno << " :" << "表达式类型不兼容" << endl;
+        TypeIR* leftType;
+        TypeIR* rightType;
+        leftType = Expr(t->child[0].get());
+        rightType = Expr(t->child[1].get());
+        if (leftType != rightType) { //递归检查左右两个子表达式的类型
+            cout << "line " << t->lineno << " :表达式运算符"
+                << opToText(t->attr.ExpAttr.op) << "两侧类型不兼容，左侧为"
+                << typeToText(leftType) << "，右侧为" << typeToText(rightType) << endl;
             exit(1);
         }
         switch (t->attr.ExpAttr.op) {
@@ -477,6 +589,7 @@ TypeIR* Expr(Treenode* t) {
         }
         return Eptr;
         break;
+    }
     case ConstK:return intPtr;
         break;
     case IdEK:
@@ -599,7 +712,9 @@ void AssignStatement(Treenode* t) {
     }
     eptr2 = Expr(child2.get());
     if (eptr1 != eptr2) {
-        cout << "line " << t->lineno << " : " << "赋值类型不匹配" << endl;
+        cout << "line " << t->lineno << " :赋值类型不匹配，左侧"
+            << child1->name[0] << "类型为" << typeToText(eptr1)
+            << "，右侧表达式类型为" << typeToText(eptr2) << endl;
         exit(1);
     }
 }
@@ -649,32 +764,49 @@ void CallStatement(Treenode* t) {
     Treenode* param=tmp.get();
     
     ParamTable* procParam = symbol->attrIR->More.ProcAttr.param;
+    int paramIndex = 1;
     while (param != nullptr && procParam != nullptr) {
         TypeIR* callParamType = Expr(param);
-        if (callParamType->typeKind == ArrayK) {
-            if (procParam->entry->attrIR->idType->typeKind != ArrayK) {
-                cout << "line " << t->lineno << " : " << procName << "数组类型与普通类型不匹配" << endl;
+        TypeIR* expectedType = procParam->entry->attrIR->idType;
+        if (callParamType->typeKind == ArrayK || expectedType->typeKind == ArrayK) {
+            if (callParamType->typeKind != ArrayK || expectedType->typeKind != ArrayK) {
+                cout << "line " << t->lineno << " :过程" << procName
+                    << "第" << paramIndex << "个实参类型不匹配，期望"
+                    << typeToText(expectedType) << "，实际为"
+                    << typeToText(callParamType) << endl;
                 exit(1);
             }
-            if (procParam->entry->attrIR->idType->More.ArrayAttr.elemTy != callParamType->More.ArrayAttr.elemTy) {
-                cout << "line " << t->lineno << " : " << procName << "数组元素类型不匹配" << endl;
+            if (expectedType->More.ArrayAttr.elemTy != callParamType->More.ArrayAttr.elemTy) {
+                cout << "line " << t->lineno << " :过程" << procName
+                    << "第" << paramIndex << "个数组实参元素类型不匹配，期望"
+                    << typeToText(expectedType) << "，实际为"
+                    << typeToText(callParamType) << endl;
                 exit(1);
             }
-            if ((procParam->entry->attrIR->idType->More.ArrayAttr.up != callParamType->More.ArrayAttr.up) || (procParam->entry->attrIR->idType->More.ArrayAttr.low != callParamType->More.ArrayAttr.low)) {
-                cout << "line " << t->lineno << " : " << procName << "数组上下界不匹配" << endl;
+            if ((expectedType->More.ArrayAttr.up != callParamType->More.ArrayAttr.up) ||
+                (expectedType->More.ArrayAttr.low != callParamType->More.ArrayAttr.low)) {
+                cout << "line " << t->lineno << " :过程" << procName
+                    << "第" << paramIndex << "个数组实参上下界不匹配，期望"
+                    << typeToText(expectedType) << "，实际为"
+                    << typeToText(callParamType) << endl;
                 exit(1);
             }
         }
-        else if (callParamType != procParam->entry->attrIR->idType) {
-            cout << "line " << t->lineno << " : " << procName << "普通类型不匹配" << endl;
+        else if (callParamType != expectedType) {
+            cout << "line " << t->lineno << " :过程" << procName
+                << "第" << paramIndex << "个实参类型不匹配，期望"
+                << typeToText(expectedType) << "，实际为"
+                << typeToText(callParamType) << endl;
             exit(1);
         }
 
         procParam = procParam->next;
         param = param->sibling.get();
+        paramIndex++;
     }
     if (param != nullptr || procParam != nullptr) {
-        cout << "line " << t->lineno << " : " << procName << "参数个数不匹配" << endl;
+        cout << "line " << t->lineno << " :过程" << procName
+            << "参数个数不匹配" << endl;
         exit(1);
     }
 }
@@ -813,7 +945,7 @@ string toTypeKind(int enumId) {
     case CharK:return "CharK";
     case ArrayK:return "ArrayK";
     case RecordK:return "RecordK";
-        //case boolTy:return "boolTy";
+    case BoolK:return "BoolK";
     default:cout << "TypeKind异常，不存在int,char,array,record，bool之外的类型,返回空字符" << endl;
         exit(1);
     }
@@ -850,15 +982,22 @@ void PrintSymTable(Treenode* t) {
 // 作用：语义分析入口，初始化全局类型和符号表，处理主程序声明与语句体。
 TreenodePtr semanticAnalyze(TreenodePtr&& t)
 {
+    // 初始化内置类型和最外层符号表，为后续声明登记做准备。
 	initType();
 	CreateTable();
 	int Savedoff = Leveloff;
+
+    // 根节点的三个孩子依次表示主程序名、声明部分和语句体。
     TreenodePtr& MainProc = t->child[0];
     TreenodePtr& tmp = t->child[1];
     TreenodePtr& BodyNode = t->child[2];
+
+    // 先将主程序作为过程写入全局表，再为主程序内部声明创建新的作用域。
     SymbolsTable* MainProSymbol = Enter(MainProc->name[0], new AttributeIR(nullptr, procKind, 0, nullptr), scope[0]);
     MainProc->table.emplace_back(MainProSymbol);
     CreateTable();
+
+    // 声明部分按 type、var、procedure 的顺序出现在兄弟链中，分别建表并检查语义。
     Treenode* DecNode=tmp.get();
     if (DecNode && DecNode->nodekind == TypeK) {
     	ProcessType(DecNode);
@@ -878,6 +1017,8 @@ TreenodePtr semanticAnalyze(TreenodePtr&& t)
 
     MainProSymbol->attrIR->More.ProcAttr.off = Savedoff;                //从何处开始存储过程体内局部变量
     MainProSymbol->attrIR->More.ProcAttr.moff = Savedoff + (scope.size() - 1) * 4;  //为后续递归或者嵌套调用需要留出的栈空间，除主过程之外的嵌套层数，每个子程序预留4单位空间
+
+    // 声明处理完成后，对主程序语句体进行语义检查，最后打印符号表用于调试。
     Body(BodyNode.get());
 
     printf("\n\n");

@@ -355,8 +355,6 @@ sw $t5, -24($sp) #存displayOff到栈
 sub $t5, $sp, $t5 #T5存display表绝对地址
 move $t4, $sp #将新生成记录的栈底存储T4
 addi $sp, $sp, -52 #申请ACSIZE大小的活动记录空间,SP指向栈顶
-
-
 lw $t5, 0($t4) #动态链取上层记录初始地址
 lw $t6, -24($t5) #取上层记录display表偏移地址
 sub $t5, $t5, $t6 #T5存算出的上层display表绝对地址,T5=T5-T6
@@ -475,8 +473,6 @@ sw $t5, -24($sp) #存displayOff到栈
 sub $t5, $sp, $t5 #T5存display表绝对地址
 move $t4, $sp #将新生成记录的栈底存储T4
 addi $sp, $sp, -52 #申请ACSIZE大小的活动记录空间,SP指向栈顶
-
-
 lw $t5, 0($t4) #动态链取上层记录初始地址
 lw $t6, -24($t5) #取上层记录display表偏移地址
 sub $t5, $t5, $t6 #T5存算出的上层display表绝对地址,T5=T5-T6
